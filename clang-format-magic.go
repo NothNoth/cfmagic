@@ -14,19 +14,10 @@ import (
 
 const configs_file = "configs.json"
 
-//const configs_file = "test.json"
-
 type ConfigEntry struct {
-	Type string `json:"type"`
-	Doc  string `json:"doc"`
-}
-type VersionConfigsStruct struct {
-	ConfigEntries map[string]*ConfigEntry `json:"-"`
-}
-
-type Configs struct {
-	Versions       []string                        `json:"versions"`
-	VersionConfigs map[string]VersionConfigsStruct `json:"-"`
+	Type    string   `json:"type"`
+	Doc     string   `json:"doc"`
+	Options []string `json:"options"`
 }
 
 func getClangFormatVersion(clangCmd string) string {
@@ -53,7 +44,6 @@ func getClangFormatVersion(clangCmd string) string {
 }
 
 func main() {
-	var configs Configs
 	if len(os.Args) != 2 {
 		fmt.Println("Usage: " + os.Args[0] + " <clang format binary>")
 		return
@@ -71,15 +61,23 @@ func main() {
 		return
 	}
 
-	//Read clang configs
-	err = json.Unmarshal(configsData, &configs)
+	//Read clang configs : load as raw json (just extract keys and store internal value for later parsing)
+	var data map[string]json.RawMessage
+	err = json.Unmarshal(configsData, &data)
+	if err != nil {
+		fmt.Println("Failed to parse " + configs_file)
+	}
+
+	//Parse Values for version key
+	var availableVersions []string
+	err = json.Unmarshal(data["versions"], &availableVersions)
 	if err != nil {
 		fmt.Println("Failed to parse " + configs_file)
 	}
 
 	//Match with current local version
 	configVersionEntry := ""
-	for _, v := range configs.Versions {
+	for _, v := range availableVersions {
 		if strings.Index(version, v) == 0 {
 			configVersionEntry = v
 			break
@@ -91,5 +89,20 @@ func main() {
 	}
 	fmt.Println("Will be using configuration settings for version " + configVersionEntry)
 
-	fmt.Println(configs)
+	//Now parse keys for given version
+	configVersionitems := data[configVersionEntry]
+
+	var entries map[string]*ConfigEntry
+	err = json.Unmarshal(configVersionitems, &entries)
+	if err != nil {
+		fmt.Println("Failed to parse " + configs_file)
+	}
+
+	for k, v := range entries {
+		fmt.Println(k + ": [" + v.Doc[:16] + "...] " + v.Type)
+		if len(v.Options) != 0 {
+			fmt.Println(v.Options)
+		}
+	}
+	//fmt.Println(entries)
 }
