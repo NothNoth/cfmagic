@@ -32,5 +32,5 @@ func main() {
 		return
 	}
 
-	magic(entries, perfectSource)
+	magic(clangPath, entries, perfectSource)
 }
