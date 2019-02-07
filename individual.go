@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const intRange = 4
+const intRange = 120
 
 func (ind Individual) String() (s string) {
 	return ind.toOneLineConfig()
@@ -53,6 +53,10 @@ func generateConfigValue(entry string, configEntries map[string]*ConfigEntry) st
 
 	if entry == "IndentWidth" {
 		return "4"
+	}
+
+	if entry == "BreakBeforeBraces" {
+		return "Allman"
 	}
 
 	v := configEntries[entry]
