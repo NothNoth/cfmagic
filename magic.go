@@ -143,7 +143,7 @@ func magic(clangPath string, configEntries map[string]*ConfigEntry, perfectSourc
 
 		//Boost mutations if top population is too homogenous
 		if stdDev < minStdDevForMutationBoost {
-			mutationRate = 100
+			mutationRate = baseMutationRate * 2
 		} else {
 			mutationRate = baseMutationRate
 		}
