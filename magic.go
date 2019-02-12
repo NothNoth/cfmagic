@@ -17,17 +17,6 @@ var mutationRate uint32
 
 const minStdDevForMutationBoost = 5.0
 
-type ConfigValue struct {
-	entry string
-	value string
-}
-
-type Individual struct {
-	configValues []ConfigValue
-	score        uint32
-	identifier   uint32
-}
-
 type Population struct {
 	population []Individual
 	generation uint32
@@ -55,8 +44,14 @@ func (pop Population) String() string {
 func (pop Population) mix(configEntries map[string]*ConfigEntry) {
 	var i uint32
 	for i = 0; i < populationSize/2; i++ {
+		var motherID int
 		fatherID := rand.Intn(int(populationSize / 2))
-		motherID := rand.Intn(int(populationSize / 2))
+		for {
+			motherID := rand.Intn(int(populationSize / 2))
+			if fatherID != motherID {
+				break
+			}
+		}
 		baby := pop.population[motherID].mix(&pop.population[fatherID], configEntries)
 		pop.population[i+populationSize/2] = baby
 	}

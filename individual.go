@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -14,8 +13,63 @@ import (
 
 const intRange = 120
 
+type ConfigEntryType int
+
+const (
+	String ConfigEntryType = iota
+	Int
+	Unsigned
+	Bool
+	Flags
+)
+
+type ConfigValue struct {
+	entry     string
+	valueType ConfigEntryType
+
+	valueString   string
+	valueBool     bool
+	valueInt      int
+	valueUnsigned uint32
+	valueFlags    map[string]bool
+}
+
+type Individual struct {
+	configValues []ConfigValue
+	score        uint32
+	identifier   uint32
+}
+
 func (ind Individual) String() (s string) {
 	return ind.toOneLineConfig()
+}
+
+func (cv ConfigValue) String() (s string) {
+	switch cv.valueType {
+	case String:
+		return cv.entry + ": " + cv.valueString
+	case Int:
+		return cv.entry + ": " + fmt.Sprintf("%d", cv.valueInt)
+	case Unsigned:
+		return cv.entry + ": " + fmt.Sprintf("%d", cv.valueUnsigned)
+	case Bool:
+		return cv.entry + ": " + fmt.Sprintf("%t", cv.valueBool)
+	case Flags:
+		s = cv.entry + ": {"
+		idx := 0
+		for f, v := range cv.valueFlags {
+			if idx != 0 {
+				s += ", "
+			}
+			idx++
+
+			s += f + ": " + fmt.Sprintf("%t", v)
+		}
+		s += "}"
+		return s
+	}
+
+	return ""
 }
 
 func (ind Individual) toOneLineConfig() (s string) {
@@ -25,7 +79,7 @@ func (ind Individual) toOneLineConfig() (s string) {
 		if idx != 0 {
 			s += ", "
 		}
-		s += fmt.Sprint(cv.entry + ": " + cv.value)
+		s += cv.String()
 	}
 	s += "}"
 	return s
@@ -35,72 +89,72 @@ func (ind Individual) toClangFormatConfigFile() (s string) {
 	s = "---\n"
 
 	for _, cv := range ind.configValues {
-		s += cv.entry + ": " + cv.value + "\n"
+		s += cv.String() + "\n"
 	}
 	s += "...\n"
 	return s
 }
-func generateConfigValue(entry string, configEntries map[string]*ConfigEntry) string {
+
+func generateConfigValue(entry string, configEntries map[string]*ConfigEntry) *ConfigValue {
+	var cv ConfigValue
+	cv.entry = entry
 
 	if entry == "Language" {
-		return ""
+		return nil
 	}
 	if entry == "DisableFormat" {
-		return ""
+		return nil
 	}
 	if entry == "BreakAfterJavaFieldAnnotations" {
-		return ""
-	}
-
-	if entry == "IndentWidth" {
-		return "4"
-	}
-
-	if entry == "BreakBeforeBraces" {
-		return "Custom"
+		return nil
 	}
 
 	v := configEntries[entry]
 	if strings.LastIndex(v.Type, "Flags") != -1 {
-		value := "{"
-		for idx, o := range v.Options {
-			if idx != 0 {
-				value += ", "
-			}
+		cv.valueType = Flags
+		cv.valueFlags = make(map[string]bool)
+		for _, f := range v.Options {
+
 			if rand.Intn(2) == 0 {
-				value += o + ": false"
+				cv.valueFlags[f] = false
 			} else {
-				value += o + ": true"
+				cv.valueFlags[f] = true
 			}
 		}
-		value += "}"
-		return value
+		return &cv
 	}
 
 	switch v.Type {
 	case "bool":
+		cv.valueType = Bool
+
 		if rand.Intn(2) == 0 {
-			return "false"
+			cv.valueBool = false
+			return &cv
 		} else {
-			return "true"
+			cv.valueBool = true
+			return &cv
 		}
-		break
 	case "int":
-		return fmt.Sprintf("%d", rand.Intn(intRange*2)-intRange)
-		break
+		cv.valueType = Int
+		cv.valueInt = rand.Intn(intRange*2) - intRange
+		return &cv
 	case "unsigned":
-		return fmt.Sprintf("%d", rand.Intn(intRange))
-		break
+		cv.valueType = Unsigned
+		cv.valueUnsigned = uint32(rand.Intn(intRange))
+		return &cv
 	default:
 		if len(v.Options) != 0 {
-			return v.Options[rand.Intn(len(v.Options)-1)]
+			cv.valueType = String
+			cv.valueString = v.Options[rand.Intn(len(v.Options))]
+			return &cv
 		} else {
 			fmt.Println("Err: no type/:parameter for " + entry)
-			return ""
+			return nil
 		}
 	}
 
-	return ""
+	return nil
 }
 
 func genIndividual(configEntries map[string]*ConfigEntry) (ind Individual) {
@@ -108,9 +162,9 @@ func genIndividual(configEntries map[string]*ConfigEntry) (ind Individual) {
 	ind.score = math.MaxUint32
 	ind.identifier = uint32(rand.Intn(math.MaxUint32))
 	for entry := range configEntries {
-		value := generateConfigValue(entry, configEntries)
-		if len(value) != 0 {
-			ind.configValues = append(ind.configValues, ConfigValue{entry: entry, value: value})
+		cv := generateConfigValue(entry, configEntries)
+		if cv != nil {
+			ind.configValues = append(ind.configValues, *cv)
 		}
 	}
 
@@ -133,44 +187,74 @@ func (ind *Individual) UpdateScore(clangPath string, perfectSource string) error
 
 	ioutil.WriteFile(fileName, out, os.ModePerm)
 
-	out, err = exec.Command("/usr/bin/diff", fileName, perfectSource).Output()
+	out, _ = exec.Command("/usr/bin/diff", fileName, perfectSource).Output()
+
+	//ind.score = uint32(bytes.Count(out, []byte("\n")))
+	ind.score = uint32(len(out))
 	/*
-		if err != nil {
-			return err
+		if ind.score == 0 {
+			fmt.Println("Job done")
+			fmt.Println("Formated code at : " + fileName)
+			fmt.Println("Clang config at  : " + path.Join(path.Dir(perfectSource), ".clang-format"))
+			panic("woot")
 		}*/
-
-	ind.score = uint32(bytes.Count(out, []byte("\n")))
-
 	return nil
 }
 
 func (mother *Individual) mix(father *Individual, configEntries map[string]*ConfigEntry) (baby Individual) {
-	for i := 0; i < len(mother.configValues); i++ {
-		var entry string
-		var value string
-		entry = mother.configValues[i].entry
 
-		if rand.Intn(2) == 0 {
-			value = mother.configValues[i].value
-		} else {
-			for j := 0; j < len(father.configValues); j++ {
-				if father.configValues[i].entry == entry {
-					value = father.configValues[i].value
-					break
+	for i := 0; i < len(mother.configValues); i++ {
+		var motherValue *ConfigValue
+		var fatherValue *ConfigValue
+		var babyValue ConfigValue
+		motherValue = &mother.configValues[i]
+		var j int
+		for j = 0; j < len(father.configValues); j++ {
+			if father.configValues[i].entry == motherValue.entry {
+				fatherValue = &father.configValues[i]
+				break
+			}
+		}
+		if fatherValue == nil {
+			baby.configValues = append(baby.configValues, *motherValue)
+			continue
+		}
+
+		//Mix mother and father values
+		switch motherValue.valueType {
+		case String:
+			fallthrough
+		case Unsigned:
+			fallthrough
+		case Int:
+			fallthrough
+		case Bool:
+			if rand.Intn(2) == 0 {
+				babyValue = *motherValue
+			} else {
+				babyValue = *fatherValue
+			}
+		case Flags:
+			babyValue.valueType = Flags
+			babyValue.entry = motherValue.entry
+			babyValue.valueFlags = make(map[string]bool)
+			for f := range motherValue.valueFlags {
+				if rand.Intn(2) == 0 {
+					babyValue.valueFlags[f] = motherValue.valueFlags[f]
+				} else {
+					babyValue.valueFlags[f] = fatherValue.valueFlags[f]
 				}
 			}
-			if len(value) == 0 {
-				value = mother.configValues[i].value
-			}
 		}
 
+		//If mutation, override with new value
 		if uint32(rand.Intn(100)) <= mutationRate {
-			mutatedValue := generateConfigValue(entry, configEntries)
-			if len(mutatedValue) != 0 {
-				value = mutatedValue
+			mutatedValue := generateConfigValue(motherValue.entry, configEntries)
+			if mutatedValue != nil {
+				babyValue = *mutatedValue
 			}
 		}
-		baby.configValues = append(baby.configValues, ConfigValue{entry: entry, value: value})
+		baby.configValues = append(baby.configValues, babyValue)
 	}
 
 	baby.identifier = uint32(rand.Intn(math.MaxUint32))
