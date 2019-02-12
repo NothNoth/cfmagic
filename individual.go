@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -56,7 +57,7 @@ func generateConfigValue(entry string, configEntries map[string]*ConfigEntry) st
 	}
 
 	if entry == "BreakBeforeBraces" {
-		return "Allman"
+		return "Custom"
 	}
 
 	v := configEntries[entry]
@@ -137,7 +138,8 @@ func (ind *Individual) UpdateScore(clangPath string, perfectSource string) error
 		if err != nil {
 			return err
 		}*/
-	ind.score = uint32(len(out))
+
+	ind.score = uint32(bytes.Count(out, []byte("\n")))
 
 	return nil
 }

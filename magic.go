@@ -12,7 +12,10 @@ import (
 )
 
 var populationSize uint32
+var baseMutationRate uint32
 var mutationRate uint32
+
+const minStdDevForMutationBoost = 5.0
 
 type ConfigValue struct {
 	entry string
@@ -71,10 +74,43 @@ func genPopulation(configEntries map[string]*ConfigEntry) Population {
 	return pop
 }
 
+func (pop *Population) getStdDev(topN int) float64 {
+	var avg float64
+	var stdDev float64
+	var count float64
+
+	for idx, p := range pop.population {
+		if idx > topN {
+			break
+		}
+		//Ignore erroneous scores
+		if p.score != math.MaxUint32 {
+			avg += float64(p.score)
+			count += 1.0
+		}
+	}
+	avg /= count
+
+	stdDev = 0.0
+	for idx, p := range pop.population {
+		if idx > topN {
+			break
+		}
+		//Ignore erroneous scores
+		if p.score != math.MaxUint32 {
+			dev := math.Abs(float64(p.score) - avg)
+			stdDev += dev * dev
+		}
+	}
+
+	return math.Sqrt(stdDev / count)
+}
+
 func magic(clangPath string, configEntries map[string]*ConfigEntry, perfectSource string, popSize uint32, mutRate uint32) {
 
 	populationSize = popSize
-	mutationRate = mutRate
+	baseMutationRate = mutRate
+	mutationRate = baseMutationRate
 
 	pop := genPopulation(configEntries)
 	fmt.Println("Population ready")
@@ -107,7 +143,15 @@ func magic(clangPath string, configEntries map[string]*ConfigEntry, perfectSourc
 
 		//Sort
 		sort.Sort(AllIndividuals(pop.population))
-		fmt.Printf("Best score for generation %d: %d\n", pop.generation, pop.population[0].score)
+		stdDev := pop.getStdDev(len(pop.population) / 2)
+		fmt.Printf("Best score for generation %d: %d (stdDev: %f)\n", pop.generation, pop.population[0].score, stdDev)
+
+		//Boost mutations if top population is too homogenous
+		if stdDev < minStdDevForMutationBoost {
+			mutationRate = 100
+		} else {
+			mutationRate = baseMutationRate
+		}
 
 		//Mix
 		pop.mix(configEntries)
