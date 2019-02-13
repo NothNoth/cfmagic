@@ -62,6 +62,10 @@ __How long does it take to find a nice .clang-format configuration file matching
 
 A few minutes is usually enough.
 
+__It's been running for three weeks, how do I get the results now?__
+
+Just hit ctrl+C, the current best solution will be written in a .clang-format file.
+
 __Will cfmagic always find the ultimate .clang-format configuration file?__
 
 No, simply because all possibilities are not managed by clang-format. cfmagic will find a "close" solution.

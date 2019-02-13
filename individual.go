@@ -60,9 +60,7 @@ func (ind *Individual) UpdateScore(clangPath string, perfectSource string) error
 	ind.score = math.MaxUint32
 	conf := ind.toClangFormatConfigFile()
 
-	//fileName := fmt.Sprintf("/tmp/reformated_%d", ind.identifier)
 	fileName := "/tmp/reformated"
-
 	ioutil.WriteFile(path.Join(path.Dir(perfectSource), ".clang-format"), []byte(conf), os.ModePerm)
 
 	out, err := exec.Command(clangPath, "-style=file", perfectSource).Output()
@@ -76,13 +74,7 @@ func (ind *Individual) UpdateScore(clangPath string, perfectSource string) error
 
 	//ind.score = uint32(bytes.Count(out, []byte("\n")))
 	ind.score = uint32(len(out))
-	/*
-		if ind.score == 0 {
-			fmt.Println("Job done")
-			fmt.Println("Formated code at : " + fileName)
-			fmt.Println("Clang config at  : " + path.Join(path.Dir(perfectSource), ".clang-format"))
-			panic("woot")
-		}*/
+
 	return nil
 }
 

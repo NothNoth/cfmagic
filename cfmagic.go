@@ -53,9 +53,12 @@ func main() {
 }
 
 func cfmagic(clangPath string, configEntries map[string]*ConfigEntry, perfectSource string, populationSize uint32, mutationRate uint32) {
+	if (populationSize < 2) || (mutationRate > 100) {
+		fmt.Println("Invalid settings")
+		return
+	}
 
 	pop := genPopulation(populationSize, configEntries)
-	fmt.Println("Population ready")
 	fmt.Printf("Population size : %d | Mutation rate %d %%\n", populationSize, mutationRate)
 
 	done := false
@@ -70,6 +73,8 @@ func cfmagic(clangPath string, configEntries map[string]*ConfigEntry, perfectSou
 		fmt.Println("Received signal " + s.String())
 		done = true
 	}()
+
+	fmt.Println("Hit CTRL+C to end iterations and save the current best result")
 
 	for {
 		pop.generation++
@@ -88,13 +93,11 @@ func cfmagic(clangPath string, configEntries map[string]*ConfigEntry, perfectSou
 		stdDev := pop.getStdDev(len(pop.population) / 2)
 		fmt.Printf("Best score for generation %d: %d (stdDev: %f)\n", pop.generation, pop.population[0].score, stdDev)
 
+		//Mix
 		//Boost mutations if top population is too homogenous
 		if stdDev < minStdDevForMutationBoost {
-			//Mix
 			pop.mix(2*mutationRate, configEntries)
-
 		} else {
-			//Mix
 			pop.mix(mutationRate, configEntries)
 		}
 

@@ -8,6 +8,12 @@ import (
 
 const intRange = 120
 
+var ignoredSettings = map[string]bool{
+	"Language":                       true,
+	"DisableFormat":                  true,
+	"BreakAfterJavaFieldAnnotations": true,
+}
+
 type ConfigEntryType int
 
 const (
@@ -61,13 +67,8 @@ func generateConfigValue(entry string, configEntries map[string]*ConfigEntry) *C
 	var cv ConfigValue
 	cv.entry = entry
 
-	if entry == "Language" {
-		return nil
-	}
-	if entry == "DisableFormat" {
-		return nil
-	}
-	if entry == "BreakAfterJavaFieldAnnotations" {
+	found, _ := ignoredSettings[entry]
+	if found == true {
 		return nil
 	}
 
