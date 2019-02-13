@@ -84,8 +84,8 @@ At this point, you will want to renew things by adding more randomness.
 
 In order to do so, we compute the standard deviation of the scores for every generation. If too low, mutationRate is doubled for the next generation.
 
-__I see "floating point exceptions" errors__
+__I see "signal: floating point exception" errors__
 
-Funily enough, cfmagic also acts as a clang-format fuzzer!
+Funnily enough, cfmagic also acts as a clang-format fuzzer!
 So "yes", some versions of clang-format may crash: this is handled by cfmagic and has no impact on the results (you may safely ignore these errors).
 
