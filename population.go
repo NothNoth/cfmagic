@@ -21,7 +21,7 @@ func genPopulation(populationSize uint32, configEntries map[string]*ConfigEntry)
 	}
 	pop.generation = 0
 	pop.populationSize = populationSize
-	fmt.Println(pop)
+	//fmt.Println(pop)
 	return pop
 }
 
@@ -47,6 +47,7 @@ func (pop Population) mix(mutationRate uint32, configEntries map[string]*ConfigE
 			}
 		}
 		baby := pop.population[motherID].mix(&pop.population[fatherID], mutationRate, configEntries)
+		baby.score = scoreUnitialized
 		pop.population[i+pop.populationSize/2] = baby
 	}
 }
@@ -61,7 +62,7 @@ func (pop *Population) getStdDev(topN int) float64 {
 			break
 		}
 		//Ignore erroneous scores
-		if p.score != math.MaxUint32 {
+		if p.score != scoreUnitialized {
 			avg += float64(p.score)
 			count += 1.0
 		}
@@ -74,7 +75,7 @@ func (pop *Population) getStdDev(topN int) float64 {
 			break
 		}
 		//Ignore erroneous scores
-		if p.score != math.MaxUint32 {
+		if p.score != scoreUnitialized {
 			dev := math.Abs(float64(p.score) - avg)
 			stdDev += dev * dev
 		}

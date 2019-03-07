@@ -85,10 +85,12 @@ func loadConfig(clangPath string) (map[string]*ConfigEntry, error) {
 	}
 
 	for k, v := range entries {
-		fmt.Println(k + ": [" + v.Doc[:16] + "...] " + v.Type)
+		fmt.Print(k + ": " + v.Type)
 		if len(v.Options) != 0 {
-			fmt.Println(v.Options)
+			fmt.Print(" Options:")
+			fmt.Print(v.Options)
 		}
+		fmt.Println("")
 	}
 
 	return entries, nil

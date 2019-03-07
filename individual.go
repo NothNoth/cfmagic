@@ -6,7 +6,8 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-	"path"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 type Individual struct {
@@ -44,7 +45,7 @@ func (ind Individual) toClangFormatConfigFile() (s string) {
 
 func genIndividual(configEntries map[string]*ConfigEntry) (ind Individual) {
 
-	ind.score = math.MaxUint32
+	ind.score = scoreUnitialized
 	ind.identifier = uint32(rand.Intn(math.MaxUint32))
 	for entry := range configEntries {
 		cv := generateConfigValue(entry, configEntries)
@@ -56,25 +57,31 @@ func genIndividual(configEntries map[string]*ConfigEntry) (ind Individual) {
 	return ind
 }
 
-func (ind *Individual) UpdateScore(clangPath string, perfectSource string) error {
-	ind.score = math.MaxUint32
+func (ind *Individual) UpdateScore(clangPath string, perfectSourceData []byte) error {
+	ind.score = scoreUnitialized
 	conf := ind.toClangFormatConfigFile()
 
-	fileName := "/tmp/reformated"
-	ioutil.WriteFile(path.Join(path.Dir(perfectSource), ".clang-format"), []byte(conf), os.ModePerm)
+	ioutil.WriteFile(".clang-format", []byte(conf), os.ModePerm)
 
-	out, err := exec.Command(clangPath, "-style=file", perfectSource).Output()
+	cmd := exec.Command(clangPath, "-style=file")
+	stdin, err := cmd.StdinPipe()
+	defer stdin.Close()
 	if err != nil {
 		return err
 	}
 
-	ioutil.WriteFile(fileName, out, os.ModePerm)
+	go func() {
+		defer stdin.Close()
+		stdin.Write(perfectSourceData)
+	}()
 
-	out, _ = exec.Command("/usr/bin/diff", fileName, perfectSource).Output()
+	out, err := cmd.Output()
 
-	//ind.score = uint32(bytes.Count(out, []byte("\n")))
-	ind.score = uint32(len(out))
+	dmp := diffmatchpatch.New()
 
+	diffs := dmp.DiffMain(string(perfectSourceData), string(out), false)
+
+	ind.score = uint32(dmp.DiffLevenshtein(diffs))
 	return nil
 }
 
@@ -135,7 +142,7 @@ func (mother *Individual) mix(father *Individual, mutationRate uint32, configEnt
 	}
 
 	baby.identifier = uint32(rand.Intn(math.MaxUint32))
-	baby.score = uint32(rand.Intn(math.MaxUint32))
+	baby.score = scoreUnitialized
 
 	return
 }
