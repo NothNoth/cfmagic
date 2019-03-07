@@ -66,7 +66,6 @@ func evalPopulation(clangPath string, perfectSourceData []byte, pop *Population,
 		}
 	}
 	doneCH <- 1
-	fmt.Println("done")
 	return nil
 }
 
@@ -138,8 +137,13 @@ func cfmagic(clangPath string, configEntries map[string]*ConfigEntry, perfectSou
 		stdDev := pop.getStdDev(len(pop.population) / 2)
 		fmt.Printf("Best score for generation %d: %d (stdDev: %f)\n", pop.generation, pop.population[0].score, stdDev)
 		for z := 0; z < len(pop.population); z++ {
-			fmt.Printf("%d score : %d\n", z, pop.population[z].score)
+			fmt.Printf("#%d score : %d\n", z, pop.population[z].score)
 		}
+		if pop.population[0].score == 0 {
+			fmt.Println("Found perfect configuration, stopping here.")
+			break
+		}
+
 		//Mix
 		//Boost mutations if top population is too homogenous
 		if stdDev < minStdDevForMutationBoost {
