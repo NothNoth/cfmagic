@@ -2,6 +2,8 @@
 
 Clang is cool and Clang-Format is really cool, so adding genetic algorithms makes it super cool __and__ hype.
 
+[![asciicast](https://asciinema.org/a/232250.svg)](https://asciinema.org/a/232250)
+
 ## Why ?
 
 Clang-Format is a great tool when you want to make sure your team uses the proper indent conventions so that your code base looks homogenous.
